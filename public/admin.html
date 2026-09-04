@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Panel de Administrador - Amigo Secreto 👑</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <div class="container">
+    <header class="app-header">
+      <div class="app-logo">👑</div>
+      <h1 id="adminHeaderTitle">Panel del Administrador</h1>
+      <p id="adminHeaderSubtitle">Gestión y control de la sala</p>
+    </header>
+
+    <!-- 1. Pantalla de Acceso con PIN de Admin -->
+    <div class="card" id="adminLoginCard">
+      <h2 class="card-title">🔒 Acceso Protegido</h2>
+      <p class="card-subtitle">
+        Ingresa el PIN de seguridad asignado al crear la sala para ver las estadísticas y administrar el juego.
+      </p>
+
+      <form id="adminLoginForm">
+        <div class="form-group">
+          <label for="adminPinInput">PIN de Administrador:</label>
+          <input type="password" id="adminPinInput" maxlength="8" placeholder="Ingresa el PIN" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="btnLoginAdmin">
+          Acceder al Panel
+        </button>
+      </form>
+    </div>
+
+    <!-- 2. Panel Principal del Administrador -->
+    <div id="adminDashboard" style="display: none;">
+
+      <!-- Card: Enlace de Invitación WhatsApp -->
+      <div class="card" style="border: 2px solid #10b981;">
+        <h2 class="card-title" style="color: #065f46;">📲 Enlace para WhatsApp Familiar</h2>
+        <p class="card-subtitle">
+          Comparte este enlace en el grupo de WhatsApp. Cada familiar entrará, registrará su género y nombre, y el sistema lo emparejará.
+        </p>
+
+        <div class="share-link-box">
+          <span class="share-link-text" id="shareUrlDisplay">...</span>
+          <button type="button" class="btn-copy" id="btnCopyLink">Copiar</button>
+        </div>
+
+        <button type="button" class="btn btn-whatsapp" id="btnShareWhatsApp">
+          📲 Compartir en WhatsApp
+        </button>
+      </div>
+
+      <!-- Card: Estado y Progreso de la Sala -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h2 class="card-title" style="margin-bottom: 0;">📊 Progreso del Sorteo</h2>
+          <span id="roomStatusBadge" class="badge badge-waiting">En Espera</span>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 0.95rem; font-weight: 700; color: #374151;">
+          <span>Participantes Registrados:</span>
+          <span id="counterText">0 / 0</span>
+        </div>
+
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="adminProgressFill" style="width: 0%;"></div>
+        </div>
+
+        <p id="roomSummaryText" style="font-size: 0.85rem; color: #6b7280; margin-top: 8px;">
+          Esperando a que los familiares ingresen con el enlace.
+        </p>
+
+        <div id="adminStorageBadge" style="margin-top: 10px; padding: 6px 10px; background: #f3f4f6; border-radius: 8px; font-size: 0.8rem; color: #4b5563;">
+          ☁️ Persistencia: <span id="adminStorageText">Cargando...</span>
+        </div>
+      </div>
+
+      <!-- Card: Lista de Participantes -->
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <h2 class="card-title" style="margin-bottom: 0;">👥 Familiares Conectados</h2>
+          <button type="button" class="btn btn-secondary" id="btnToggleSecrets" style="width: auto; padding: 6px 12px; font-size: 0.82rem;">
+            👁️ Revelar Asignaciones
+          </button>
+        </div>
+
+        <p id="secretNoticeWarning" style="display: none; font-size: 0.82rem; color: #b45309; background: #fef3c7; padding: 8px; border-radius: 8px; margin-bottom: 12px;">
+          ⚠️ <strong>Modo Revelado:</strong> Se muestran los emparejamientos. Si vas a participar como jugador, te recomendamos mantenerlos ocultos para no hacerte spoiler.
+        </p>
+
+        <div style="overflow-x: auto;">
+          <table class="participants-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Género</th>
+                <th>Estado</th>
+                <th class="col-secret" style="display: none;">Le regala a</th>
+              </tr>
+            </thead>
+            <tbody id="participantsTableBody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: #9ca3af; padding: 20px;">
+                  Aún no se ha registrado ningún participante.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Card: Opciones Avanzadas del Administrador -->
+      <div class="card">
+        <h2 class="card-title">⚙️ Controles de la Sala</h2>
+        <p class="card-subtitle">Acciones especiales para el administrador:</p>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <button type="button" class="btn btn-secondary" id="btnFinalizeEarly">
+            🔒 Finalizar y Cerrar Sorteo Ahora
+          </button>
+          <small style="color: #6b7280; font-size: 0.8rem; margin-top: -6px;">
+            Úsalo si ya entraron todos los que iban a participar aunque sean menos del cupo inicial.
+          </small>
+
+          <button type="button" class="btn btn-danger" id="btnResetRoom">
+            🔄 Reiniciar Sorteo de la Sala
+          </button>
+          <small style="color: #ef4444; font-size: 0.8rem; margin-top: -6px;">
+            Borra los emparejamientos para empezar desde cero si hubo algún error.
+          </small>
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-bottom: 20px;">
+        <a href="/" class="btn btn-secondary" style="display: inline-flex; width: auto;">
+          🏠 Volver al Inicio
+        </a>
+      </div>
+
+    </div>
+
+    <footer>
+      Amigo Secreto Familiar • Panel de Administración
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+  <script>
+    const pathParts = window.location.pathname.split('/');
+    const roomCode = (pathParts[pathParts.length - 1] || '').toUpperCase();
+
+    // Obtener PIN de URL si vino desde creación (?pin=1234)
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentAdminPin = urlParams.get('pin') || '';
+
+    let adminData = null;
+    let refreshInterval = null;
+    let showSecrets = false;
+
+    async function init() {
+      if (!roomCode || roomCode === 'ADMIN') {
+        alert('Código de sala inválido');
+        window.location.href = '/';
+        return;
+      }
+
+      if (currentAdminPin) {
+        document.getElementById('adminPinInput').value = currentAdminPin;
+        attemptLogin(currentAdminPin);
+      }
+    }
+
+    // Login Admin
+    document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pin = document.getElementById('adminPinInput').value.trim();
+      await attemptLogin(pin);
+    });
+
+    async function attemptLogin(pin) {
+      try {
+        const res = await fetch(`/api/rooms/${roomCode}/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminPin: pin })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'PIN incorrecto');
+        }
+
+        currentAdminPin = pin;
+        document.getElementById('adminLoginCard').style.display = 'none';
+        document.getElementById('adminDashboard').style.display = 'block';
+
+        await loadDashboard();
+        refreshInterval = setInterval(loadDashboard, 3000);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch(`/api/rooms/${roomCode}/admin/data`, {
+          headers: { 'x-admin-pin': currentAdminPin }
+        });
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            clearInterval(refreshInterval);
+            alert('Sesión expirada o PIN no autorizado.');
+            location.reload();
+          }
+          return;
+        }
+
+        adminData = await res.json();
+        renderDashboard();
+      } catch (err) {
+        console.error('Error cargando datos admin:', err);
+      }
+    }
+
+    function renderDashboard() {
+      document.getElementById('adminHeaderTitle').innerText = adminData.title;
+      document.getElementById('adminHeaderSubtitle').innerText = `Código de Sala: ${adminData.code}`;
+
+      // Enlace para WhatsApp
+      const shareUrl = `${window.location.origin}/game/${adminData.code}`;
+      document.getElementById('shareUrlDisplay').innerText = shareUrl;
+
+      document.getElementById('btnCopyLink').onclick = () => {
+        copyToClipboard(shareUrl, '¡Enlace de WhatsApp copiado!');
+      };
+
+      document.getElementById('btnShareWhatsApp').onclick = () => {
+        openWhatsAppShare(shareUrl, adminData.title);
+      };
+
+      // Barra de progreso y contador
+      const totalJoined = adminData.totalJoined;
+      const maxP = adminData.maxParticipants;
+      document.getElementById('counterText').innerText = `${totalJoined} / ${maxP}`;
+
+      const pct = Math.min(100, Math.round((totalJoined / maxP) * 100));
+      document.getElementById('adminProgressFill').style.width = `${pct}%`;
+
+      const badge = document.getElementById('roomStatusBadge');
+      const summary = document.getElementById('roomSummaryText');
+
+      if (adminData.status === 'completed') {
+        badge.className = 'badge badge-success';
+        badge.innerText = 'Sorteo Completo';
+        summary.innerText = '🎉 ¡Todos los participantes han sido emparejados exitosamente!';
+      } else {
+        badge.className = 'badge badge-waiting';
+        badge.innerText = 'En Espera';
+        summary.innerText = `Faltan ${maxP - totalJoined} participantes por ingresar para cerrar el ciclo completo.`;
+      }
+
+      // Modo de base de datos
+      if (adminData.storageMode) {
+        const storageEl = document.getElementById('adminStorageText');
+        if (adminData.storageMode.isFirebase) {
+          storageEl.innerHTML = `<strong style="color: #059669;">🔥 Firebase Cloud Firestore (${adminData.storageMode.projectId})</strong>`;
+        } else {
+          storageEl.innerHTML = `<span style="color: #b45309; font-weight: 600;">📁 Archivo Local Seguro (data/rooms.json)</span>`;
+        }
+      }
+
+      // Tabla de participantes
+      const tbody = document.getElementById('participantsTableBody');
+      if (adminData.participants.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" style="text-align: center; color: #9ca3af; padding: 20px;">
+              Aún no se ha registrado ningún participante. ¡Comparte el enlace en WhatsApp!
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = adminData.participants.map((p, idx) => {
+        const genderEmoji = p.gender === 'Masculino' ? '👨' : (p.gender === 'Femenino' ? '👩' : '✨');
+        const statusBadge = p.isPaired
+          ? '<span style="color: #059669; font-weight: 600;">✓ Emparejado</span>'
+          : '<span style="color: #d97706; font-weight: 600;">⏳ Esperando</span>';
+
+        const givesToHtml = showSecrets
+          ? `<strong>${p.givesTo || 'Esperando...'}</strong>`
+          : '<span style="color: #9ca3af;">🔒 Oculto</span>';
+
+        return `
+          <tr>
+            <td><strong>${idx + 1}</strong></td>
+            <td><strong>${p.name}</strong></td>
+            <td>${genderEmoji} ${p.gender}</td>
+            <td>${statusBadge}</td>
+            <td class="col-secret" style="display: ${showSecrets ? 'table-cell' : 'none'};">${givesToHtml}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Toggle para revelar o proteger secretos
+    document.getElementById('btnToggleSecrets').addEventListener('click', () => {
+      showSecrets = !showSecrets;
+      const btn = document.getElementById('btnToggleSecrets');
+      const warning = document.getElementById('secretNoticeWarning');
+      const secretHeaders = document.querySelectorAll('.col-secret');
+
+      if (showSecrets) {
+        btn.innerText = '🔒 Ocultar Asignaciones';
+        btn.className = 'btn btn-danger';
+        warning.style.display = 'block';
+        secretHeaders.forEach(el => el.style.display = 'table-cell');
+      } else {
+        btn.innerText = '👁️ Revelar Asignaciones';
+        btn.className = 'btn btn-secondary';
+        warning.style.display = 'none';
+        secretHeaders.forEach(el => el.style.display = 'none');
+      }
+
+      if (adminData) renderDashboard();
+    });
+
+    // Cerrar sorteo anticipadamente
+    document.getElementById('btnFinalizeEarly').addEventListener('click', async () => {
+      if (!confirm('¿Deseas cerrar el sorteo ahora con los participantes actuales? El primer participante será emparejado con el último para cerrar el ciclo.')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/rooms/${roomCode}/admin/finalize`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': currentAdminPin
+          }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al finalizar');
+        showToast('¡Sorteo cerrado con éxito!');
+        loadDashboard();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    // Reiniciar sala
+    document.getElementById('btnResetRoom').addEventListener('click', async () => {
+      if (!confirm('¿Estás seguro de reiniciar la sala? Se eliminarán todos los participantes y emparejamientos actuales.')) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/rooms/${roomCode}/admin/reset`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-pin': currentAdminPin
+          }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al reiniciar');
+        showToast('Sala reiniciada.');
+        loadDashboard();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

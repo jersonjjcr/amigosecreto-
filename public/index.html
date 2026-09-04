@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Amigo Secreto Familiar 🎁</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <div class="container">
+    <header class="app-header">
+      <div class="app-logo">🎁</div>
+      <h1>Amigo Secreto Familiar</h1>
+      <p>Sorteo anónimo, divertido y directo por WhatsApp</p>
+      <div id="storageStatusBadge" style="display: inline-block; margin-top: 8px; font-size: 0.78rem; padding: 4px 12px; border-radius: 999px; background: rgba(255,255,255,0.15); color: #d1fae5; font-weight: 500;">
+        ☁️ Base de Datos: Verificando...
+      </div>
+    </header>
+
+    <!-- Card 1: Crear Nueva Sala (Admin) -->
+    <div class="card" id="createRoomCard">
+      <h2 class="card-title">👑 Crear Nueva Sala (Administrador)</h2>
+      <p class="card-subtitle">
+        Configura el espacio de juego para tu familia o amigos y obtén el enlace para compartir por WhatsApp.
+      </p>
+
+      <form id="createRoomForm">
+        <div class="form-group">
+          <label for="roomTitle">Nombre del Grupo o Familia</label>
+          <input type="text" id="roomTitle" placeholder="Ej: Familia Rodríguez, Navidad 2026" required>
+        </div>
+
+        <div class="form-group">
+          <label for="maxParticipants">Número de Participantes Previstos</label>
+          <input type="number" id="maxParticipants" min="2" max="100" value="6" required>
+          <small style="color: #6b7280; font-size: 0.8rem; display: block; margin-top: 4px;">
+            El sorteo completará el ciclo exacto cuando todos ingresen.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="adminPin">PIN de Seguridad del Administrador (4 dígitos)</label>
+          <input type="password" id="adminPin" maxlength="8" placeholder="Ej: 1234" value="1234" required>
+          <small style="color: #6b7280; font-size: 0.8rem; display: block; margin-top: 4px;">
+            Te permitirá administrar la sala y ver el progreso.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="giftBudget">Presupuesto Sugerido (Opcional)</label>
+          <input type="text" id="giftBudget" placeholder="Ej: $30.000 - $50.000 COP">
+        </div>
+
+        <div class="form-group">
+          <label for="exchangeDate">Fecha de Entrega (Opcional)</label>
+          <input type="text" id="exchangeDate" placeholder="Ej: 24 de Diciembre">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="btnCreateRoom">
+          ✨ Crear Sala y Generar Enlace
+        </button>
+      </form>
+    </div>
+
+    <!-- Modal / Pantalla de Sala Creada Exitosamente -->
+    <div class="card" id="createdRoomSuccess" style="display: none; border: 2px solid #10b981;">
+      <div style="text-align: center; margin-bottom: 16px;">
+        <span style="font-size: 2.8rem;">🎉</span>
+        <h2 style="color: #065f46; font-size: 1.4rem; margin-top: 6px;">¡Sala Creada con Éxito!</h2>
+        <p style="color: #4b5563; font-size: 0.9rem;" id="successRoomTitle"></p>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label>Enlace de Participación para WhatsApp:</label>
+        <div class="share-link-box">
+          <span class="share-link-text" id="shareLinkDisplay"></span>
+          <button type="button" class="btn-copy" id="btnCopyShareLink">Copiar</button>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-whatsapp" id="btnShareWhatsAppSuccess" style="margin-bottom: 12px;">
+        📲 Enviar al Grupo de WhatsApp
+      </button>
+
+      <a id="linkToAdmin" href="#" class="btn btn-secondary" style="margin-bottom: 8px;">
+        👑 Ir a mi Panel de Administrador
+      </a>
+
+      <button type="button" class="btn btn-secondary" onclick="location.reload()">
+        Crear Otra Sala
+      </button>
+    </div>
+
+    <!-- Card 2: Ingresar a Sala Existente -->
+    <div class="card">
+      <h2 class="card-title">🎟️ ¿Tienes un Código de Sala?</h2>
+      <p class="card-subtitle">Si te dieron el código de 6 letras, ingrésalo aquí:</p>
+
+      <form id="joinByCodeForm">
+        <div class="form-group">
+          <input type="text" id="roomCodeInput" placeholder="EJ: K6DAVC" maxlength="8" style="text-transform: uppercase; font-weight: bold; letter-spacing: 2px; text-align: center;" required>
+        </div>
+        <button type="submit" class="btn btn-secondary">
+          Entrar a la Sala
+        </button>
+      </form>
+    </div>
+
+    <footer>
+      Amigo Secreto © 2026 • Seguro, anónimo y sin repeticiones
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+  <script>
+    // Crear Sala
+    const createForm = document.getElementById('createRoomForm');
+    createForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnCreateRoom');
+      btn.disabled = true;
+      btn.innerText = 'Creando sala...';
+
+      const title = document.getElementById('roomTitle').value;
+      const maxParticipants = document.getElementById('maxParticipants').value;
+      const adminPin = document.getElementById('adminPin').value;
+      const giftBudget = document.getElementById('giftBudget').value;
+      const exchangeDate = document.getElementById('exchangeDate').value;
+
+      try {
+        const res = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, maxParticipants, adminPin, giftBudget, exchangeDate })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Error al crear la sala');
+        }
+
+        // Mostrar pantalla de éxito
+        document.getElementById('createRoomCard').style.display = 'none';
+        const successCard = document.getElementById('createdRoomSuccess');
+        successCard.style.display = 'block';
+
+        document.getElementById('successRoomTitle').innerText = `${data.room.title} (Código: ${data.code})`;
+        document.getElementById('shareLinkDisplay').innerText = data.shareUrl;
+
+        // Botón Copiar
+        document.getElementById('btnCopyShareLink').onclick = () => {
+          copyToClipboard(data.shareUrl, '¡Enlace de WhatsApp copiado!');
+        };
+
+        // Botón WhatsApp
+        document.getElementById('btnShareWhatsAppSuccess').onclick = () => {
+          openWhatsAppShare(data.shareUrl, data.room.title);
+        };
+
+        // Enlace al Admin
+        const linkAdmin = document.getElementById('linkToAdmin');
+        linkAdmin.href = `/admin/${data.code}?pin=${encodeURIComponent(data.adminPin)}`;
+
+        launchConfetti();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '✨ Crear Sala y Generar Enlace';
+      }
+    });
+
+    // Unirse por código
+    document.getElementById('joinByCodeForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
+      if (code) {
+        window.location.href = `/game/${code}`;
+      }
+    });
+
+    // Consultar estado de almacenamiento (Firebase vs Local)
+    fetch('/api/status').then(r => r.json()).then(d => {
+      const badge = document.getElementById('storageStatusBadge');
+      if (d.storage && d.storage.isFirebase) {
+        badge.innerHTML = `🔥 Firebase Cloud Firestore: Activo (${d.storage.projectId})`;
+        badge.style.background = 'rgba(16, 185, 129, 0.25)';
+        badge.style.color = '#6ee7b7';
+      } else {
+        badge.innerHTML = `📁 Almacenamiento Local Activo (Salas Persistentes)`;
+      }
+    }).catch(() => {});
+  </script>
+</body>
+</html>

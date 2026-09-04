@@ -1,0 +1,21 @@
+# Dependencias
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# SEGURIDAD Y CREDENCIALES (NUNCA SUBIR CLAVES PRIVADAS)
+firebase-key.json
+*.pem
+*.key
+.env
+.env.local
+
+# Datos locales de respaldo
+data/rooms.json
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

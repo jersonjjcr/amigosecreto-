@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Juego de Amigo Secreto 🎁</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <div class="container">
+    <header class="app-header">
+      <div class="app-logo">🎁</div>
+      <h1 id="roomHeaderTitle">Amigo Secreto</h1>
+      <p id="roomHeaderSubtitle">Cargando sala...</p>
+    </header>
+
+    <!-- Información de la sala (Presupuesto / Fecha) -->
+    <div id="roomDetailsBanner" class="card" style="display: none; padding: 14px 18px; margin-bottom: 16px; background: rgba(255,255,255,0.9);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div id="budgetDisplay" style="font-size: 0.88rem; color: #065f46; font-weight: 600;"></div>
+        <div id="dateDisplay" style="font-size: 0.88rem; color: #b45309; font-weight: 600;"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 1: Formulario de Registro (Nombre y Género) -->
+    <div class="card" id="joinCard">
+      <h2 class="card-title">✨ Ingresa tus Datos</h2>
+      <p class="card-subtitle">
+        Selecciona tu género e ingresa tu nombre para que el sistema te asigne a tu amigo secreto.
+      </p>
+
+      <form id="joinForm">
+        <div class="form-group">
+          <label>1. Selecciona tu Género:</label>
+          <div class="gender-selector">
+            <label class="gender-option">
+              <input type="radio" name="gender" value="Masculino" checked>
+              <div class="gender-btn">
+                <span class="emoji">👨</span>
+                <span>Hombre</span>
+              </div>
+            </label>
+
+            <label class="gender-option">
+              <input type="radio" name="gender" value="Femenino">
+              <div class="gender-btn">
+                <span class="emoji">👩</span>
+                <span>Mujer</span>
+              </div>
+            </label>
+
+            <label class="gender-option">
+              <input type="radio" name="gender" value="Otro">
+              <div class="gender-btn">
+                <span class="emoji">⭐</span>
+                <span>Otro</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="participantName">2. Ingresa tu Nombre Completo o Apodo:</label>
+          <input type="text" id="participantName" placeholder="Ej: Carlos Pérez, Tía Carmen" autocomplete="name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="giftPreferences">3. ¿Qué te gustaría recibir o qué te gusta? (Opcional):</label>
+          <textarea id="giftPreferences" rows="2" placeholder="Ej: Chocolates, café, libros de misterio, talla M..."></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="btnJoin">
+          🎁 Aceptar y Participar
+        </button>
+      </form>
+    </div>
+
+    <!-- SECCIÓN 2: Pantalla de Espera (Cuando no hay nadie para emparejar) -->
+    <div class="card" id="waitingCard" style="display: none;">
+      <div class="waiting-box">
+        <div class="radar-pulse">
+          <span class="radar-icon">⏳</span>
+        </div>
+
+        <span class="badge badge-waiting" style="margin-bottom: 12px;">En Espera</span>
+
+        <h2 style="font-size: 1.35rem; color: #1f2937; margin-bottom: 10px;">
+          ¡Hola, <span id="waitingUserName" style="color: #059669;"></span>!
+        </h2>
+
+        <p style="color: #4b5563; font-size: 0.95rem; line-height: 1.5; margin-bottom: 18px;">
+          Aún no hay nadie para emparejar en este momento.<br>
+          <strong>Por favor espera a que ingresen más participantes.</strong>
+        </p>
+
+        <div style="background: #f3f4f6; padding: 14px; border-radius: 12px; margin-bottom: 18px;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; color: #374151;">
+            <span>Participantes en la sala:</span>
+            <span id="waitingCountDisplay">1 / 5</span>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="waitingProgressFill" style="width: 20%;"></div>
+          </div>
+          <small style="color: #6b7280; font-size: 0.8rem; display: block; margin-top: 6px;">
+            📡 Verificando automáticamente en tiempo real...
+          </small>
+        </div>
+
+        <button type="button" class="btn btn-whatsapp" id="btnNudgeWhatsApp" style="margin-bottom: 10px;">
+          📲 Invitar a más familiares por WhatsApp
+        </button>
+      </div>
+    </div>
+
+    <!-- SECCIÓN 3: Amigo Secreto Asignado (Regalo Misterioso / Revelación) -->
+    <div class="card" id="matchedCard" style="display: none;">
+      <div style="text-align: center; margin-bottom: 16px;">
+        <span class="badge badge-success" style="margin-bottom: 8px;">¡Emparejado con Éxito!</span>
+        <h2 style="font-size: 1.3rem; color: #111827;">
+          ¡Hola, <span id="matchedUserName" style="color: #059669;"></span>!
+        </h2>
+        <p style="color: #4b5563; font-size: 0.9rem;">
+          Tu amigo secreto ya fue seleccionado por el sistema.
+        </p>
+      </div>
+
+      <!-- Caja de regalo interactiva para abrir -->
+      <div class="gift-box-wrapper" id="giftBoxWrapper">
+        <div class="gift-box" id="clickableGiftBox">
+          <div class="gift-ribbon-v"></div>
+          <div class="gift-ribbon-h"></div>
+          <div class="gift-bow">🎀</div>
+        </div>
+        <p style="font-size: 0.95rem; font-weight: 700; color: #b91c1c;">
+          👇 ¡Toca la caja de regalo para descubrirlo! 👇
+        </p>
+      </div>
+
+      <!-- Tarjeta revelada -->
+      <div class="match-reveal-card" id="matchRevealCard">
+        <span style="font-size: 0.9rem; color: #047857; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">
+          Te correspondió darle regalo a:
+        </span>
+
+        <div class="match-target-name" id="targetPersonName">
+          ...
+        </div>
+
+        <div class="match-target-gender" id="targetPersonGender">
+          ...
+        </div>
+
+        <div id="targetPreferencesContainer" style="display: none; margin-top: 14px; background: rgba(255,255,255,0.7); padding: 10px; border-radius: 10px; text-align: left;">
+          <strong style="color: #065f46; font-size: 0.85rem;">💡 Sus gustos o sugerencias:</strong>
+          <p id="targetPreferencesText" style="font-size: 0.9rem; color: #374151; margin-top: 4px;"></p>
+        </div>
+
+        <div class="secret-notice">
+          🤫 <strong>¡Recuerda mantener el secreto!</strong><br>
+          Nadie sabe a quién le regalarás hasta el momento de la entrega.
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      Amigo Secreto Familiar • Enlace directo para WhatsApp
+    </footer>
+  </div>
+
+  <script src="/app.js"></script>
+  <script>
+    // Extraer código de la URL (/game/ABCDEF)
+    const pathParts = window.location.pathname.split('/');
+    const roomCode = (pathParts[pathParts.length - 1] || '').toUpperCase();
+
+    let currentParticipant = null;
+    let roomData = null;
+    let pollInterval = null;
+
+    // Inicializar página
+    async function init() {
+      if (!roomCode || roomCode === 'GAME') {
+        alert('Código de sala inválido');
+        window.location.href = '/';
+        return;
+      }
+
+      await loadRoomInfo();
+
+      // Verificar si el usuario ya tenía una sesión guardada en este dispositivo
+      const savedSession = ParticipantSession.get(roomCode);
+      if (savedSession && savedSession.name) {
+        document.getElementById('participantName').value = savedSession.name;
+        // Consultar directamente su estado
+        checkMatchStatus(savedSession.name);
+      }
+    }
+
+    async function loadRoomInfo() {
+      try {
+        const res = await fetch(`/api/rooms/${roomCode}`);
+        if (!res.ok) {
+          throw new Error('Sala no encontrada o enlace inválido.');
+        }
+        roomData = await res.json();
+
+        document.getElementById('roomHeaderTitle').innerText = roomData.title;
+        document.getElementById('roomHeaderSubtitle').innerText =
+          `Sala: ${roomData.code} • ${roomData.participantCount} de ${roomData.maxParticipants} participantes`;
+
+        // Banner de presupuesto o fecha si existen
+        if (roomData.giftBudget || roomData.exchangeDate) {
+          const banner = document.getElementById('roomDetailsBanner');
+          banner.style.display = 'block';
+          if (roomData.giftBudget) {
+            document.getElementById('budgetDisplay').innerText = `💰 Presupuesto: ${roomData.giftBudget}`;
+          }
+          if (roomData.exchangeDate) {
+            document.getElementById('dateDisplay').innerText = `📅 Entrega: ${roomData.exchangeDate}`;
+          }
+        }
+      } catch (err) {
+        document.getElementById('roomHeaderSubtitle').innerText = err.message;
+        alert(err.message);
+      }
+    }
+
+    // Manejar envío del formulario de registro
+    const joinForm = document.getElementById('joinForm');
+    joinForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnJoin');
+      btn.disabled = true;
+      btn.innerText = 'Emparejando...';
+
+      const name = document.getElementById('participantName').value.trim();
+      const gender = document.querySelector('input[name="gender"]:checked').value;
+      const giftPreferences = document.getElementById('giftPreferences').value.trim();
+
+      try {
+        const res = await fetch(`/api/rooms/${roomCode}/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, gender, giftPreferences })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Error al unirse');
+        }
+
+        // Guardar sesión localmente
+        ParticipantSession.save(roomCode, { name, gender, id: data.participant.id });
+        currentParticipant = data.participant;
+
+        if (data.status === 'matched' && data.matchedWith) {
+          showMatchedScreen(name, data.matchedWith);
+        } else {
+          showWaitingScreen(name, data.totalJoined, data.maxParticipants);
+        }
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '🎁 Aceptar y Participar';
+      }
+    });
+
+    // Consultar estado periódico (polling)
+    async function checkMatchStatus(name) {
+      try {
+        const res = await fetch(`/api/rooms/${roomCode}/match?name=${encodeURIComponent(name)}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (data.status === 'matched' && data.matchedWith) {
+          // Ya fue emparejado!
+          if (pollInterval) clearInterval(pollInterval);
+          showMatchedScreen(data.participant.name, data.matchedWith);
+        } else {
+          // Aún en espera
+          showWaitingScreen(data.participant.name, data.totalJoined, data.maxParticipants);
+        }
+      } catch (e) {
+        console.warn('Error verificando estado:', e);
+      }
+    }
+
+    // Mostrar Pantalla de Espera
+    function showWaitingScreen(name, joined, max) {
+      document.getElementById('joinCard').style.display = 'none';
+      document.getElementById('matchedCard').style.display = 'none';
+
+      const waitingCard = document.getElementById('waitingCard');
+      waitingCard.style.display = 'block';
+
+      document.getElementById('waitingUserName').innerText = name;
+      document.getElementById('waitingCountDisplay').innerText = `${joined} / ${max}`;
+      const percentage = Math.min(100, Math.round((joined / max) * 100));
+      document.getElementById('waitingProgressFill').style.width = `${percentage}%`;
+
+      // Botón para reenviar por WhatsApp si quiere apurar a la familia
+      document.getElementById('btnNudgeWhatsApp').onclick = () => {
+        const shareUrl = window.location.href;
+        openWhatsAppShare(shareUrl, roomData?.title || 'Amigo Secreto');
+      };
+
+      // Iniciar polling si no está activo
+      if (!pollInterval) {
+        pollInterval = setInterval(() => {
+          checkMatchStatus(name);
+        }, 2500);
+      }
+    }
+
+    // Mostrar Pantalla de Emparejado
+    function showMatchedScreen(userName, target) {
+      if (pollInterval) clearInterval(pollInterval);
+
+      document.getElementById('joinCard').style.display = 'none';
+      document.getElementById('waitingCard').style.display = 'none';
+
+      const matchedCard = document.getElementById('matchedCard');
+      matchedCard.style.display = 'block';
+
+      document.getElementById('matchedUserName').innerText = userName;
+      document.getElementById('targetPersonName').innerText = target.name;
+
+      const genderEmoji = target.gender === 'Masculino' ? '👨' : (target.gender === 'Femenino' ? '👩' : '✨');
+      document.getElementById('targetPersonGender').innerText = `${genderEmoji} (${target.gender})`;
+
+      if (target.preferences) {
+        document.getElementById('targetPreferencesContainer').style.display = 'block';
+        document.getElementById('targetPreferencesText').innerText = target.preferences;
+      }
+
+      // Animación de Regalo
+      const giftBox = document.getElementById('clickableGiftBox');
+      const giftWrapper = document.getElementById('giftBoxWrapper');
+      const revealCard = document.getElementById('matchRevealCard');
+
+      giftBox.onclick = () => {
+        giftWrapper.style.display = 'none';
+        revealCard.style.display = 'block';
+        launchConfetti();
+      };
+    }
+
+    init();
+  </script>
+</body>
+</html>
