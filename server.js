@@ -14,6 +14,11 @@ app.use(express.urlencoded({ extended: true }));
 // Servir archivos estáticos del frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Servir favicon SVG para evitar errores 404
+app.get('/favicon.ico', (req, res) => {
+  res.type('image/svg+xml').send('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎁</text></svg>');
+});
+
 // Rutas de conveniencia para URLs amigables
 app.get('/game/:code', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'game.html'));
@@ -284,4 +289,9 @@ function startServer(portToTry) {
   });
 }
 
-startServer(PORT);
+// Iniciar servidor si no estamos en entorno serverless (Vercel)
+if (!process.env.VERCEL) {
+  startServer(PORT);
+}
+
+module.exports = app;
