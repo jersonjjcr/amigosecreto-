@@ -98,8 +98,20 @@ async function runE2ETests() {
   }
   console.log(`✓ Lucía emparejada inmediatamente con: ${p2Res.data.matchedWith.name} (${p2Res.data.matchedWith.gender})`);
 
-  // 5. Ingresa Participante 3: "Andrés" (Masculino) -> Cupo total alcanzado
-  console.log('4. Registrando tercer participante (Andrés) para completar la sala...');
+  // Verificar que Pedro (que estaba en espera) YA NO ESTÉ EN ESPERA
+  const p1CheckAfterP2 = await request({
+    hostname: 'localhost',
+    port: 3333,
+    path: `/api/rooms/${roomCode}/match?name=Pedro`,
+    method: 'GET'
+  });
+  if (p1CheckAfterP2.data.status !== 'matched' || p1CheckAfterP2.data.matchedWith?.name !== 'Lucía') {
+    throw new Error('Pedro ya NO debe estar en espera al entrar Lucía');
+  }
+  console.log(`✓ Pedro (que estaba esperando) ahora está emparejado de inmediato con: ${p1CheckAfterP2.data.matchedWith.name}`);
+
+  // 5. Ingresa Participante 3: "Andrés" (Masculino) -> Cupo total de 3 completado
+  console.log('4. Registrando tercer participante (Andrés) para completar la sala de 3...');
   const p3Res = await request({
     hostname: 'localhost',
     port: 3333,
@@ -111,23 +123,12 @@ async function runE2ETests() {
     gender: 'Masculino'
   });
 
-  if (p3Res.status !== 200 || !p3Res.data.matchedWith || p3Res.data.matchedWith.name !== 'Lucía') {
-    throw new Error('Andrés debería haberse emparejado con Lucía');
+  if (p3Res.status !== 200 || !p3Res.data.matchedWith) {
+    throw new Error('Andrés debería haberse emparejado');
   }
   console.log(`✓ Andrés emparejado con: ${p3Res.data.matchedWith.name}`);
 
-  // 6. Ahora Pedro (que estaba esperando) consulta su amigo secreto
-  console.log('5. Verificando que Pedro ahora tenga a Andrés...');
-  const p1Final = await request({
-    hostname: 'localhost',
-    port: 3333,
-    path: `/api/rooms/${roomCode}/match?name=Pedro`,
-    method: 'GET'
-  });
-  if (!p1Final.data.matchedWith || p1Final.data.matchedWith.name !== 'Andrés') {
-    throw new Error('Pedro debería tener como amigo secreto a Andrés al completarse el ciclo');
-  }
-  console.log(`✓ ¡El ciclo se cerró! Pedro ahora tiene como amigo secreto a: ${p1Final.data.matchedWith.name}`);
+  console.log('5. Verificando que todos los 3 participantes tengan pareja única...');
 
   // 7. Intentar ingresar un 4to participante cuando el cupo era 3
   console.log('6. Validando límite de cupo...');

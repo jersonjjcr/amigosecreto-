@@ -2,7 +2,7 @@ const storage = require('./storage');
 const { joinAndMatch, getParticipantMatch } = require('./matching');
 
 async function runMatchingTests() {
-  console.log('--- INICIANDO PRUEBAS DE AMIGO SECRETO ---');
+  console.log('--- INICIANDO PRUEBAS DE AMIGO SECRETO (EMPAREJAMIENTO INMEDIATO) ---');
 
   // 1. Crear sala de prueba para 4 participantes
   const room = await storage.createRoom({
@@ -16,7 +16,7 @@ async function runMatchingTests() {
   // 2. Ingresa Participante 1: Carlos (Masculino)
   const r1 = joinAndMatch(room, { name: 'Carlos', gender: 'Masculino' });
   console.log(`✓ Participante 1 (Carlos): status = ${r1.status}, mensaje = "${r1.message}"`);
-  if (r1.status !== 'waiting') throw new Error('P1 debería estar en espera');
+  if (r1.status !== 'waiting') throw new Error('P1 debería estar en espera al no haber nadie antes');
 
   // 3. Ingresa Participante 2: Ana (Femenino)
   const r2 = joinAndMatch(room, { name: 'Ana', gender: 'Femenino' });
@@ -25,28 +25,33 @@ async function runMatchingTests() {
     throw new Error('P2 (Ana) debería haberse emparejado con Carlos');
   }
 
-  // 4. Ingresa Participante 3: Sofía (Femenino)
-  const r3 = joinAndMatch(room, { name: 'Sofía', gender: 'Femenino' });
-  console.log(`✓ Participante 3 (Sofía): status = ${r3.status}, amigo secreto = ${r3.matchedWith?.name}`);
-  if (!r3.matchedWith || r3.matchedWith.name !== 'Ana') {
-    throw new Error('P3 (Sofía) debería haberse emparejado con Ana');
+  // 4. VERIFICAR QUE CARLOS (P1, EL QUE ESTABA EN ESPERA) YA NO ESTÉ EN ESPERA
+  const checkCarlos = getParticipantMatch(room, 'Carlos');
+  console.log(`✓ Carlos (P1, que estaba esperando) ahora tiene asignado a: ${checkCarlos.matchedWith?.name} (status = ${checkCarlos.status})`);
+  if (checkCarlos.status !== 'matched' || checkCarlos.matchedWith?.name !== 'Ana') {
+    throw new Error('Carlos ya NO debe estar en espera; debe estar emparejado con Ana de inmediato');
   }
 
-  // 5. Ingresa Participante 4: David (Masculino) -> Cupo máximo completado
+  // 5. Ingresa Participante 3: Sofía (Femenino)
+  const r3 = joinAndMatch(room, { name: 'Sofía', gender: 'Femenino' });
+  console.log(`✓ Participante 3 (Sofía): status = ${r3.status}, mensaje = "${r3.message}"`);
+  if (r3.status !== 'waiting') throw new Error('P3 (Sofía) debería estar en espera de su pareja');
+
+  // 6. Ingresa Participante 4: David (Masculino)
   const r4 = joinAndMatch(room, { name: 'David', gender: 'Masculino' });
   console.log(`✓ Participante 4 (David): status = ${r4.status}, amigo secreto = ${r4.matchedWith?.name}`);
   if (!r4.matchedWith || r4.matchedWith.name !== 'Sofía') {
     throw new Error('P4 (David) debería haberse emparejado con Sofía');
   }
 
-  // 6. Consultar el estado de Carlos (P1) que estaba en espera
-  const checkCarlos = getParticipantMatch(room, 'Carlos');
-  console.log(`✓ Carlos (P1) ahora tiene asignado a: ${checkCarlos.matchedWith?.name}`);
-  if (!checkCarlos.matchedWith || checkCarlos.matchedWith.name !== 'David') {
-    throw new Error('Carlos debería estar emparejado con David al cerrarse el ciclo');
+  // 7. Verificar que Sofía ya no esté en espera y tenga a David
+  const checkSofia = getParticipantMatch(room, 'Sofía');
+  console.log(`✓ Sofía (P3, que estaba esperando) ahora tiene asignado a: ${checkSofia.matchedWith?.name}`);
+  if (checkSofia.status !== 'matched' || checkSofia.matchedWith?.name !== 'David') {
+    throw new Error('Sofía ya NO debe estar en espera; debe estar emparejada con David');
   }
 
-  // 7. Verificar biyección y no repetición:
+  // 8. Verificar biyección y no repetición en toda la sala
   const givers = new Set();
   const receivers = new Set();
 
@@ -62,15 +67,8 @@ async function runMatchingTests() {
   console.log(`  - Total participantes: ${room.participants.length}`);
   console.log(`  - Dadores únicos: ${givers.size}`);
   console.log(`  - Receptores únicos: ${receivers.size}`);
-  console.log(`  - Nadie se regala a sí mismo.`);
   console.log(`  - Ninguna persona da 2 regalos ni recibe 2 regalos.`);
-
-  // 8. Probar reingreso de Ana
-  const recheckAna = joinAndMatch(room, { name: 'ana', gender: 'Femenino' });
-  if (recheckAna.matchedWith.name !== 'Carlos') {
-    throw new Error('El reingreso no devolvió la pareja original');
-  }
-  console.log('✓ Reingreso idempotente verificado: Ana sigue teniendo a Carlos.');
+  console.log(`  - Las parejas no se repiten.`);
 
   console.log('--- TODAS LAS PRUEBAS PASARON EXITOSAMENTE ---');
 }

@@ -70,66 +70,78 @@ function joinAndMatch(room, { name, gender, giftPreferences }) {
 
   const currentCount = room.participants.length;
 
-  if (currentCount === 0) {
-    // Caso 1: Es el primer participante en ingresar a la sala
-    // No hay nadie previo con quien emparejarlo.
+  // Buscar si hay algún participante anterior esperando pareja (alguien sin givingTo)
+  const waitingParticipant = room.participants.find(p => p.givingTo === null);
+
+  if (waitingParticipant) {
+    // ¡Encontramos a alguien esperando! Los emparejamos mutuamente
+    waitingParticipant.givingTo = newParticipant.id;
+    waitingParticipant.receivingFrom = newParticipant.id;
+
+    newParticipant.givingTo = waitingParticipant.id;
+    newParticipant.receivingFrom = waitingParticipant.id;
+
     room.participants.push(newParticipant);
+
+    // Si ya se alcanzó el cupo máximo
+    if (room.participants.length >= room.maxParticipants) {
+      room.status = 'completed';
+    }
 
     return {
       isExisting: false,
       participant: newParticipant,
-      matchedWith: null,
-      status: 'waiting',
-      message: 'Aún no hay nadie para emparejar. Espera a que ingresen más participantes.'
+      matchedWith: {
+        name: waitingParticipant.name,
+        gender: waitingParticipant.gender,
+        preferences: waitingParticipant.giftPreferences
+      },
+      status: 'matched',
+      message: `¡Emparejado con éxito! Tu amigo secreto es ${waitingParticipant.name}.`
     };
   }
 
-  // Caso 2: Ya hay participantes registrados anteriormente
-  // Buscamos candidatos elegibles que ya ingresaron su nombre y que AÚN NO tengan quién les dé un regalo.
-  // Regla: no puede recibir de sí mismo (obvio porque es nuevo) y no puede tener ya un regalo asignado.
-  const eligibleReceivers = room.participants.filter(
-    p => p.id !== newParticipant.id && p.receivingFrom === null
-  );
+  // Si nadie estaba esperando:
+  // ¿Es este el último participante del cupo y el número total es impar (ej: 3, 5)?
+  if (room.participants.length >= 2 && room.participants.length + 1 >= room.maxParticipants) {
+    // Se integra con la última pareja para formar un trío circular perfecto (A -> B -> Nuevo -> A)
+    const prev1 = room.participants[room.participants.length - 2];
+    const prev2 = room.participants[room.participants.length - 1];
 
-  let chosenReceiver = null;
+    prev1.givingTo = prev2.id;
+    prev1.receivingFrom = newParticipant.id;
 
-  if (eligibleReceivers.length > 0) {
-    // En una cadena secuencial, el último en ingresar antes de este no tiene quién le dé,
-    // o podemos elegir aleatoriamente si hubiera varios disponibles.
-    // Para respetar el flujo intuitivo: emparejar con el participante previo disponible.
-    chosenReceiver = eligibleReceivers[eligibleReceivers.length - 1];
+    prev2.givingTo = newParticipant.id;
+    prev2.receivingFrom = prev1.id;
 
-    // Asignamos: el nuevo participante le dará regalo a chosenReceiver
-    newParticipant.givingTo = chosenReceiver.id;
-    chosenReceiver.receivingFrom = newParticipant.id;
-  }
+    newParticipant.givingTo = prev1.id;
+    newParticipant.receivingFrom = prev2.id;
 
-  // Agregamos el nuevo participante a la sala
-  room.participants.push(newParticipant);
-
-  // Caso 3: ¿Se completó el cupo máximo con este ingreso?
-  if (room.participants.length >= room.maxParticipants) {
-    // Es el último participante.
-    // Cerramos el ciclo: el primer participante (que no tiene a quién darle regalo todavía)
-    // se le asigna el último participante (que aún no recibe de nadie).
-    const firstParticipant = room.participants[0];
-    if (firstParticipant && !firstParticipant.givingTo) {
-      firstParticipant.givingTo = newParticipant.id;
-      newParticipant.receivingFrom = firstParticipant.id;
-    }
+    room.participants.push(newParticipant);
     room.status = 'completed';
+
+    return {
+      isExisting: false,
+      participant: newParticipant,
+      matchedWith: {
+        name: prev1.name,
+        gender: prev1.gender,
+        preferences: prev1.giftPreferences
+      },
+      status: 'matched',
+      message: `¡Emparejado con éxito! Tu amigo secreto es ${prev1.name}.`
+    };
   }
+
+  // Caso: Es el primero o no hay nadie libre aún para emparejar
+  room.participants.push(newParticipant);
 
   return {
     isExisting: false,
     participant: newParticipant,
-    matchedWith: chosenReceiver
-      ? { name: chosenReceiver.name, gender: chosenReceiver.gender, preferences: chosenReceiver.giftPreferences }
-      : null,
-    status: chosenReceiver ? 'matched' : 'waiting',
-    message: chosenReceiver
-      ? `¡Felicidades! Se te ha asignado como amigo secreto a ${chosenReceiver.name}.`
-      : 'Espera a que ingresen más participantes para conocer tu amigo secreto.'
+    matchedWith: null,
+    status: 'waiting',
+    message: 'Aún no hay nadie para emparejar. Espera a que ingresen más participantes.'
   };
 }
 
@@ -183,13 +195,23 @@ function closeAndFinalize(room) {
     throw new Error('Se necesitan al menos 2 participantes para cerrar el sorteo.');
   }
 
-  // Verificar si el primer participante aún no tiene a quién regalarle
-  const first = room.participants[0];
-  const last = room.participants[room.participants.length - 1];
+  // Buscar si alguien quedó sin pareja
+  const unpaired = room.participants.find(p => p.givingTo === null);
+  if (unpaired && room.participants.length >= 3) {
+    // Integrar al participante suelto con una pareja existente para hacer un trío
+    const other1 = room.participants.find(p => p.id !== unpaired.id);
+    const other2 = room.participants.find(p => p.id === other1.givingTo);
 
-  if (!first.givingTo) {
-    first.givingTo = last.id;
-    last.receivingFrom = first.id;
+    if (other1 && other2) {
+      other1.givingTo = other2.id;
+      other1.receivingFrom = unpaired.id;
+
+      other2.givingTo = unpaired.id;
+      other2.receivingFrom = other1.id;
+
+      unpaired.givingTo = other1.id;
+      unpaired.receivingFrom = other2.id;
+    }
   }
 
   room.status = 'completed';
